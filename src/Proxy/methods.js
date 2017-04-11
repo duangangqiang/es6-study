@@ -328,6 +328,59 @@ let proxy555 = new Proxy(target555, handler555);
 Object.keys(proxy555);
 
 
+// ownKeys方法还可以拦截Object.getOwnPropertyNames()
+var proxy5555 = new Proxy({}, {
+    ownKeys (target) {
+        return ['a', 'b', 'c'];
+    }
+});
+
+Object.getOwnPropertyNames(proxy5555); // ["a", "b", "c"]
+
+
+// ownKeys 方法返回的数组成员,只能是字符串或者Symbol值. 如果有其他类型的值,或者返回的根本不是数组,就会报错
+var obj5 = {};
+
+var proxy55555 = new Proxy(obj5, {
+    ownKeys (target) {
+        return [123, true, undefined, null, {}, []];
+    }
+});
+
+Object.getOwnPropertyNames(proxy55555); // 报错
+
+// 如果目标独享自身包含不可配置的属性,则该属性必须被ownKeys方法返回,否则报错
+var obj55 = {};
+
+Object.defineProperty(obj55, 'hehe', {
+    configurable: false,
+    writable: true,
+    value: 'hehe'
+});
+
+var proxy555555 = new Proxy(obj55, {
+    ownKeys (target) {
+        return ['aaa'];
+    }
+});
+
+Object.getOwnPropertyNames(proxy555555); // Uncaught TypeError: 'ownKeys' on proxy: trap result did not include 'hehe'
+
+
+// 如果目标对象是不可扩展的,ownKeys方法返回的数组中,必须包含原对象的所有属性,且不能包含多余的属性,否则报错
+var obj555 = { a: 1 };
+
+Object.preventExtensions(obj555);
+
+var proxy5555555 = new Proxy(obj555, {
+    ownKeys (target) {
+        return ['a', 'b'];
+    }
+});
+
+Object.getOwnPropertyNames(proxy5555555); // 'ownKeys' on proxy: trap returned extra keys but proxy target is non-extensible
+
+
 // 6.getOwnPropertyDescriptor(terget, propKey):拦截Object.getOwnPropertyDescriptor(proxy, propKey),返回属性的描述对象.
 
 // 访问对象内部属性返回undefined
@@ -360,6 +413,18 @@ var proxy7 = new Proxy(target7, handler7);
 proxy7.bar = 'bar'; // 不会报错,但是赋值也不会成功
 
 // 8.preventExtensions(target): 拦截Object.preventExtensions(proxy) 使对象变得不可扩展
+
+// 这个方法有个限制, 只有目标对象不可扩展时(Object.isExtensible(proxy) === false), proxy.preventExtensions才能返回true,否则会报错
+var proxy8 = new Proxy({}, {
+    preventExtensions (target) {
+
+        Object.preventExtensions(target);
+
+        return true;
+    }
+});
+
+Object.preventExtensions(proxy8);
 
 // 9.getPrototypeOf(target):获取目标的原型,具体来说,拦截以下操作:
     /**
@@ -402,6 +467,20 @@ var proxy1010 = new Proxy({}, {
 Object.isExtensible(proxy1010); // 报错
 
 // 11.setPrototypeOf(target, proto): 设置目标原型
+
+// 只要修改target的原型对象,就会报错
+var handler1111 = {
+    setPrototypeOf (target, proto) {
+        throw new Error('Changeing the prototype is forbidden');
+    }
+};
+
+var proto1111 = {};
+var target1111 = function() {};
+var proxy1111 = new Proxy(target1111, handler1111);
+
+Object.setPrototypeOf(proxy1111, proto1111); // Uncaught Error: Changeing the prototype is forbidden
+
 
 // 如果目标对象是函数,那么嗨有两种额外操作可以拦截:
 // 12.apply(target, object, args): 拦截Proxy实际作为函数调用的操作.比如proxy(...args),proxy.call(object, ...args), proxy.apply(...);
@@ -454,3 +533,16 @@ var proxy13 = new Proxy(function () {}, {
         }
     }
 })
+
+
+// Proxy.revocable() 方法返回一个可取消的Proxy实例
+let target0 = {};
+let handler0 = {};
+
+let { proxy : proxy0, revoke } = Proxy.revocable(target0, handler0);
+
+proxy0.foo = 123;
+proxy0.foo; //123
+
+revoke();
+proxy0.foo; // Cannot perform 'get' on a proxy that has been revoked
