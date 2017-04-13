@@ -157,3 +157,19 @@ var promise6 = new Promise(function(resolve, reject) {
     setTimeout(function() { throw new Error('test') }, 0)
 });
 promise6.then(function(value) { console.log(value) });
+
+/**
+ * catch方法返回的还是一个Promise对象,因此后面还可以接着调用then方法
+ *
+ * 如果没有报错,会跳过catch方法, 但是如果在catch后面的then方法里面报错,catch无法捕获
+ *
+ * 如果在catch中报错,后面如果没有catch,则会抛出到最外层, 但是也可以使用catch继续捕获
+ */
+someAsyncThing().catch(function(error) {
+    console.log('error: ' + error);
+}).then(function () {
+    console.log('carry on');
+});
+
+
+
